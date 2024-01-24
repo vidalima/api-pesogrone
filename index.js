@@ -1,5 +1,6 @@
 const express = require("express"); // express makes APIs - connect frotend to database
 const Redis = require("redis"); //redis is a database, import the Redis class from the redis library
+const bodyParser = require("body-parser"); //body-parser is a library that allows us to read the body of a request
 
 //import redis from 'redis';//import redis library
 
@@ -28,5 +29,14 @@ app.listen(port, () => {
 
 app.get("/boxes", async (req, res) => {
   let boxes = await redisClient.json.get("boxes", { path: "$" }); //get boxes from redis
-  res.send(JSON.stringify(boxes)); //convert boxes to a string and send it to the user
+  res.json(boxes); //convert boxes to a JSON string and send it to the user
 }); //return boxes to the user
+
+app.use(bodyParser.json()); //use the body-parser library to read JSON from the request body
+
+app.post("/boxes", async (req, res) => {
+  const newBox = req.body; //get the box from the request body
+  newBox.id = parseInt(await redisClient.json.arrLen("boxes", "$")) + 1; //add an id to the box, the user should not provide an id
+  await redisClient.json.arrAppend("boxes", "$", newBox); //save the box to redis
+  res.json(newBox); //send the box back to the user
+}); //add a box to the list of boxes
