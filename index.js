@@ -2,6 +2,10 @@ const express = require("express"); // express makes APIs - connect frotend to d
 const Redis = require("redis"); //redis is a database, import the Redis class from the redis library
 const bodyParser = require("body-parser"); //body-parser is a library that allows us to read the body of a request
 const cors = require("cors"); //cors is a library that allows us to make requests from the frontend to the backend
+const { addOrder } = require("./order"); // Import the addOrder function
+const Schema = require ("./orderItemSchema.json");
+const Ajv = require("ajv");
+const ajv = new Ajv();
 
 const options = {
   origin: "http://localhost:3000", //allow requests from the frontend
@@ -31,6 +35,22 @@ app.post("/boxes", async (req, res) => {
   await redisClient.json.arrAppend("boxes", "$", newBox); //save the box to redis
   res.json(newBox); //send the box back to the user
 }); //add a box to the list of boxes
+
+
+//New Endpoint for Orders
+app.post("/orders", async (req, res) => {
+  const validate = ajv.compile(Schema);
+  const valid = validate(req.body);
+  
+  try {
+    const order = req.body;
+    const result = await addOrder({ redisClient, order });
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 //make a list of boxes
 // const boxes = [
