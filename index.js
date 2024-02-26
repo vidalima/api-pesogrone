@@ -2,11 +2,13 @@ const express = require("express"); // express makes APIs - connect frotend to d
 const Redis = require("redis"); //redis is a database, import the Redis class from the redis library
 const bodyParser = require("body-parser"); //body-parser is a library that allows us to read the body of a request
 const cors = require("cors"); //cors is a library that allows us to make requests from the frontend to the backend
-const { addOrder } = require("./order"); // Import the addOrder function
-const Schema = require ("./orderItemSchema.json");
+const { addOrderItem, getOrderItem } = require("./orderItems");
+const fs = require("fs");
+const Schema = JSON.parse(fs.readFileSync("./orderItemSchema.json", "utf8"));
 const Ajv = require("ajv");
 const ajv = new Ajv();
 
+// SERVER SETUP
 const options = {
   origin: "http://localhost:3000", //allow requests from the frontend
 };
@@ -36,31 +38,40 @@ app.post("/boxes", async (req, res) => {
   res.json(newBox); //send the box back to the user
 }); //add a box to the list of boxes
 
-
-//New Endpoint for Orders
-app.post("/orders", async (req, res) => {
-  const validate = ajv.compile(Schema);
-  const valid = validate(req.body);
-  
+//ORDER ITEMS
+app.post("/orderItems", async (req, res) => {
   try {
-    const order = req.body;
-    const result = await addOrder({ redisClient, order });
-    res.status(200).json(result);
+    console.log("Schema:", Schema);
+    const validate = ajv.compile(Schema);
+    const valid = validate(req.body);
+    if (!valid) {
+      return res.status(400).json({ error: "Invalid request body" });
+    }
+    console.log("Request Body:", req.body);
+
+    // Calling addOrderItem function and storing the result
+    const orderItemId = await addOrderItem({
+      redisClient,
+      orderItem: req.body,
+    });
+
+    // Responding with the result
+    res
+      .status(201)
+      .json({ orderItemId, message: "Order item added successfully" });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Error adding order item:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-
-//make a list of boxes
-// const boxes = [
-//   { name: "Box1", boxid: 1 },
-//   { name: "Box2", boxid: 2 },
-//   { name: "Box3", boxid: 3 },
-//   { name: "Box4", boxid: 4 },
-// ]; //hardcoded boxes-not in the database.
-//1-URL
-//2-Callback function
-//3-Response
-//req=request
-//res=response
+app.get("/orderItems/:orderItemId", async (req, res) => {
+  try {
+    const orderItemId = req.params.orderItemId;
+    const orderItem = await getOrderItem({ redisClient, orderItemId });
+    res.json(orderItem);
+  } catch (error) {
+    console.error("Error getting order item:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});

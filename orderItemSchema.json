@@ -1,7 +1,10 @@
 {
-    "type": "object",
-    "properties": {
-    "quantity": { "type": "number" }
-    },
-    "required": ["quantity"]
-  }
+  "type": "object",
+  "properties": {
+    "orderId": { "type": "string" },
+    "productId": { "type": "string" },
+    "quantity": { "type": "integer" },
+    "customerId":{"type": "string"}
+  },
+  "required": [ "orderId", "productId", "quantity","customerId" ]
+}
